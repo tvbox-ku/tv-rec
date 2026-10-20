@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>荐片 · 影视推荐</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<style>
+:root{--bg:#1a1a1f;--card:#25252e;--card2:#2d2d38;--tx:#e8e8e8;--tx2:#999;--accent:#42b85a;--accent2:#ff9c00;--radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.5}
+a{color:inherit;text-decoration:none}
+
+header{position:sticky;top:0;z-index:100;background:rgba(26,26,31,.92);backdrop-filter:blur(12px);border-bottom:1px solid #333}
+.header-inner{max-width:1400px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px}
+.logo{font-size:22px;font-weight:700;letter-spacing:2px;white-space:nowrap}
+.logo .dot{color:var(--accent)}
+.search{flex:1;max-width:400px;position:relative}
+.search input{width:100%;padding:9px 16px 9px 38px;border-radius:20px;border:1px solid #444;background:var(--card);color:var(--tx);font-size:14px;outline:none;transition:border .2s}
+.search input:focus{border-color:var(--accent)}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.5}
+.meta-info{font-size:12px;color:var(--tx2);white-space:nowrap}
+
+.hero{max-width:1400px;margin:0 auto;padding:20px 24px}
+.hero-card{position:relative;border-radius:16px;overflow:hidden;height:340px;background:var(--card);display:flex;align-items:flex-end}
+.hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.45)}
+.hero-content{position:relative;padding:40px;max-width:600px}
+.hero-tag{display:inline-block;padding:4px 12px;border-radius:4px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;margin-bottom:12px}
+.hero-title{font-size:32px;font-weight:700;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.hero-desc{font-size:14px;color:#ccc;margin-bottom:16px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero-btn{padding:10px 28px;border-radius:6px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;transition:transform .15s}
+.hero-btn:hover{transform:scale(1.05)}
+
+main{max-width:1400px;margin:0 auto;padding:0 24px 40px}
+.section{margin-bottom:36px}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.section-head h2{font-size:20px;font-weight:600}
+.section-head .bar{width:4px;height:20px;border-radius:2px;background:var(--accent)}
+.section-head .count{font-size:13px;color:var(--tx2)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.card{background:var(--card);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.poster{position:relative;aspect-ratio:2/3;background:#333;overflow:hidden}
+.poster img{width:100%;height:100%;object-fit:cover;display:block}
+.poster .badge{position:absolute;top:6px;right:6px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.7);font-size:11px;color:var(--accent2);max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.poster .sources{position:absolute;bottom:6px;left:6px;padding:2px 6px;border-radius:4px;background:rgba(66,184,90,.85);font-size:10px;color:#fff}
+.card-info{padding:10px 12px}
+.card-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.card-meta{font-size:12px;color:var(--tx2);display:flex;gap:8px;align-items:center}
+.card-meta .year{color:var(--accent2)}
+
+.overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
+.overlay.show{display:flex;align-items:center;justify-content:center}
+.modal{background:var(--card);border-radius:14px;width:90%;max-width:900px;max-height:88vh;overflow-y:auto;position:relative}
+.modal-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.5);border:none;color:#fff;font-size:18px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center}
+.modal-head{display:flex;gap:20px;padding:24px}
+.modal-poster{width:120px;aspect-ratio:2/3;border-radius:8px;overflow:hidden;flex-shrink:0;background:#333}
+.modal-poster img{width:100%;height:100%;object-fit:cover}
+.modal-body{flex:1;min-width:0}
+.modal-title{font-size:24px;font-weight:700;margin-bottom:8px}
+.modal-sub{font-size:13px;color:var(--tx2);margin-bottom:8px}
+.modal-sub span{margin-right:12px}
+.modal-desc{font-size:13px;color:#bbb;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+
+.player-wrap{padding:0 24px 16px}
+.player-box{background:#000;border-radius:8px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.player-box video{width:100%;height:100%;object-fit:contain}
+.player-box .placeholder{color:var(--tx2);font-size:14px}
+
+.source-tabs{display:flex;gap:8px;padding:16px 24px 8px;flex-wrap:wrap}
+.source-tab{padding:6px 14px;border-radius:6px;background:var(--card2);font-size:13px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.source-tab.active{border-color:var(--accent);color:var(--accent)}
+.source-tab:hover{background:#38384a}
+
+.eps{padding:8px 24px 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;max-height:200px;overflow-y:auto}
+.ep{padding:7px;text-align:center;border-radius:6px;background:var(--card2);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep:hover{background:#38384a}
+.ep.active{background:var(--accent);color:#fff}
+
+.search-results{padding:0 24px 40px}
+.search-results .grid{margin-top:16px}
+.empty{text-align:center;color:var(--tx2);padding:60px;font-size:15px}
+.loading{text-align:center;color:var(--tx2);padding:40px}
+
+footer{text-align:center;padding:30px;color:var(--tx2);font-size:12px}
+@media(max-width:600px){
+.header-inner{padding:12px 16px;gap:12px}.meta-info{display:none}
+.hero{padding:16px}.hero-card{height:240px}.hero-content{padding:24px}.hero-title{font-size:22px}
+main{padding:0 16px 30px}.grid{grid-template-columns:repeat(2,1fr);gap:12px}
+.modal-head{padding:16px}.modal-poster{width:90px}
+}
+</style>
+</head>
+<body>
+<header>
+<div class="header-inner">
+<div class="logo">荐<span class="dot">·</span>片</div>
+<div class="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+<input id="searchInput" placeholder="搜索影片名...">
+</div>
+<div class="meta-info" id="metaInfo"></div>
+</div>
+</header>
+<div id="app"><div class="loading">加载中...</div></div>
+<footer>数据来源于聚合站点 · 仅供学习交流 · 请支持正版</footer>
+
+<div class="overlay" id="overlay">
+<div class="modal" id="modal">
+<button class="modal-close" onclick="closeModal()">✕</button>
+<div id="modalContent"></div>
+</div>
+</div>
+
+<script>
+let DATA=null;
+const $=s=>document.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+
+async function init(){
+try{
+const r=await fetch('recommend.json?v='+Date.now());
+DATA=await r.json();
+}catch(e){
+$('#app').innerHTML='<div class="empty">数据加载失败，请确保 recommend.json 与本页面同目录</div>';
+return;
+}
+$('#metaInfo').textContent=`共 ${DATA.total} 部 · ${DATA.generated_at}`;
+renderHome();
+$('#searchInput').addEventListener('input',debounce(onSearch,300));
+$('#searchInput').addEventListener('keydown',e=>{if(e.key==='Escape')clearSearch()});
+}
+
+function renderHome(){
+const app=$('#app');app.innerHTML='';
+const firstMovie=(DATA.sections.find(s=>s.title==='电影')||{}).items||[];
+if(firstMovie.length){
+const h=firstMovie[0];
+const hero=el('div','hero');
+hero.innerHTML=`<div class="hero-card">
+<div class="hero-bg" style="background-image:url('${esc(h.pic)}')"></div>
+<div class="hero-content">
+<span class="hero-tag">编辑推荐</span>
+<div class="hero-title">${esc(h.name)}</div>
+<div class="hero-desc">${esc(h.content||h.class||'')}</div>
+<button class="hero-btn" onclick="openModal(${JSON.stringify(h).replace(/"/g,'&quot;')})">立即播放</button>
+</div></div>`;
+app.appendChild(hero);
+}
+DATA.sections.forEach(sec=>{
+const s=el('div','section');
+s.innerHTML=`<div class="section-head"><span class="bar"></span><h2>${esc(sec.title)}</h2><span class="count">${sec.items.length} 部</span></div>`;
+const grid=el('div','grid');
+sec.items.forEach(item=>grid.appendChild(makeCard(item)));
+s.appendChild(grid);app.appendChild(s);
+});
+}
+
+function makeCard(item){
+const c=el('div','card');
+c.onclick=()=>openModal(item);
+const poster=el('div','poster');
+const img=el('img');
+img.src=item.pic||'';
+img.loading='lazy';
+img.onerror=function(){this.style.display='none';this.parentElement.style.background='#2d2d38'};
+poster.appendChild(img);
+if(item.remarks){const b=el('div','badge',esc(item.remarks));poster.appendChild(b)}
+if(item.source_count>1){const s=el('div','sources',item.source_count+'源');poster.appendChild(s)}
+const info=el('div','card-info');
+info.innerHTML=`<div class="card-title">${esc(item.name)}</div><div class="card-meta"><span class="year">${esc(item.year||'')}</span><span>${esc(item.area||'')}</span></div>`;
+c.appendChild(poster);c.appendChild(info);
+return c;
+}
+
+let currentItem=null;
+function openModal(item){
+currentItem=item;
+const oc=$('#modalContent');oc.innerHTML='';
+const head=el('div','modal-head');
+head.innerHTML=`<div class="modal-poster"><img src="${esc(item.pic||'')}" onerror="this.style.display='none'"></div>
+<div class="modal-body">
+<div class="modal-title">${esc(item.name)}</div>
+<div class="modal-sub"><span>${esc(item.year||'')}</span><span>${esc(item.area||'')}</span><span>${esc(item.class||'')}</span><span>${item.source_count}个来源</span></div>
+<div class="modal-desc">${esc(item.content||'暂无简介')}</div>
+</div>`;
+oc.appendChild(head);
+const pw=el('div','player-wrap');
+pw.innerHTML='<div class="player-box" id="playerBox"><div class="placeholder">请选择播放源和集数</div></div>';
+oc.appendChild(pw);
+const st=el('div','source-tabs');
+item.sources.forEach((s,i)=>{
+const t=el('div','source-tab'+(i===0?' active':''),esc(s.site)+' ('+s.lines.length+'线路)');
+t.onclick=()=>selectSource(i);
+st.appendChild(t);
+});
+oc.appendChild(st);
+const eps=el('div','eps');eps.id='epsBox';oc.appendChild(eps);
+$('#overlay').classList.add('show');
+selectSource(0);
+}
+
+let hls=null,currentVideo=null;
+function selectSource(idx){
+document.querySelectorAll('.source-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+const src=currentItem.sources[idx];
+const epsBox=$('#epsBox');epsBox.innerHTML='';
+if(!src||!src.lines.length){epsBox.innerHTML='<div class="empty">无可用线路</div>';return}
+src.lines.forEach((line,li)=>{
+line.eps.forEach((ep,ei)=>{
+const e=el('div','ep',esc(ep.n||('第'+(ei+1)+'集')));
+e.onclick=()=>play(src.site,li,ei);
+epsBox.appendChild(e);
+});
+});
+}
+
+function play(siteName,lineIdx,epIdx){
+document.querySelectorAll('.ep').forEach(e=>e.classList.remove('active'));
+const box=$('#playerBox');
+const src=currentItem.sources.find(s=>s.site===siteName);
+const url=src.lines[lineIdx].eps[epIdx].u;
+box.innerHTML='<video id="player" controls autoplay></video>';
+const v=$('#player');currentVideo=v;
+if(hls){hls.destroy();hls=null}
+if(url.includes('.m3u8')&&Hls.isSupported()){
+hls=new Hls({maxBufferLength:30});
+hls.loadSource(url);hls.attachMedia(v);
+hls.on(Hls.Events.ERROR,(_,d)=>{if(d.fatal)box.innerHTML='<div class="placeholder">播放失败：'+d.type+'</div>'});
+}else if(v.canPlayType('application/vnd.apple.mpegurl')){
+v.src=url;
+}else{
+v.src=url;
+}
+v.play().catch(()=>{});
+}
+
+function closeModal(){
+$('#overlay').classList.remove('show');
+if(hls){hls.destroy();hls=null}
+if(currentVideo){currentVideo.pause();currentVideo=null}
+currentItem=null;
+}
+$('#overlay').addEventListener('click',e=>{if(e.target===$('#overlay'))closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+function onSearch(e){
+const q=e.target.value.trim();
+if(!q){renderHome();return}
+const results=[];
+DATA.sections.forEach(sec=>sec.items.forEach(it=>{
+if(it.name.toLowerCase().includes(q.toLowerCase()))results.push(it);
+}));
+const app=$('#app');app.innerHTML='';
+if(!results.length){app.innerHTML='<div class="empty">未找到「'+esc(q)+'」相关影片</div>';return}
+const s=el('div','section','search-results');
+s.innerHTML=`<div class="section-head"><span class="bar"></span><h2>搜索结果</h2><span class="count">${results.length} 部</span></div>`;
+const grid=el('div','grid');results.forEach(makeCard).forEach(c=>grid.appendChild(c));
+s.appendChild(grid);app.appendChild(s);
+}
+function clearSearch(){$('#searchInput').value='';renderHome()}
+
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+init();
+</script>
+</body>
+</html>
